@@ -20,5 +20,5 @@ while True:
     if checkPrice.check_highest_three_times(currentBTCprice):
         trx.makeTransaction(currentBTCprice, formatted_time)
         time.sleep(10)
-
+    trx.monitoringOpenPositions(currentBTCprice)
     time.sleep(3)
