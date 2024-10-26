@@ -1,41 +1,82 @@
 from datetime import datetime
+import os
+import json
 
 class Transactions:
     def __init__(self) -> None:
-        self.openPositions = {'2024-10-24 22:02:55': '68200.00000000', '2024-10-24 22:03:24': '68207.68000000'}
+        self.openPositions = {}
         self.amountOfProfit = 0.005 
-        self.amoutOfLost = 0.004
+        self.amountOfLost = 0.004
         self.fee = 0.1
+
+        # Ensure 'transactions.json' exists
+        if not os.path.isfile('transactions.json'):
+            with open("transactions.json", "w") as file:
+                json.dump([], file)
 
     def makeTransaction(self, price, time):
         self.openPositions[time] = price
         print(self.openPositions)
 
-    def closeTransaction(self, price):
+    def closeTransaction(self, json_file, positions_to_close, currentPrice):
         now = datetime.now()
         formatted_time = now.strftime("%Y-%m-%d %H:%M:%S")
 
+        try:
+            with open(json_file, 'r') as file:
+                data = json.load(file)
+        except (FileNotFoundError, json.JSONDecodeError):
+            print("File not found or JSON decoding error. Initializing empty data list.")
+            data = []
+
+        for key, value in positions_to_close.items():
+            profit_lost = currentPrice - float(value)
+
+            trade_entry = {
+                'time_opening': key,
+                'price_buy': value,
+                'time_closing': formatted_time,
+                'price_closing': currentPrice,
+                'profit': profit_lost
+            }
+
+            data.append(trade_entry)
+
+        with open(json_file, 'w') as file:
+            json.dump(data, file, indent=4)
+
     def monitoringOpenPositions(self, currentPrice):
+        print(f'Currently open positions {self.openPositions}')
+        # Ensure currentPrice is a float for calculations
+        currentPrice = float(currentPrice)
 
-        key_to_close_position_with_profit = [key for key, value in self.openPositions.items() if float(value) <= currentPrice + (currentPrice * self.amountOfProfit)]
-        key_to_close_position_with_lose = [key for key, value in self.openPositions.items() if float(value) >= currentPrice - (currentPrice * self.amoutOfLost)]
+        # Create dictionaries for positions to close
+        key_to_close_position_with_profit = {
+            key: value for key, value in self.openPositions.items() 
+            if float(value) < currentPrice * (1 - self.amountOfProfit)
+        }
+        
+        key_to_close_position_with_lose = {
+            key: value for key, value in self.openPositions.items() 
+            if float(value) > currentPrice * (1 + self.amountOfLost)
+        }
 
-        try:   
-            for key in key_to_close_position_with_profit:
-                del self.openPositions[key]
+        # Remove closed positions from openPositions
+        for key in list(key_to_close_position_with_profit.keys()):
+            self.openPositions.pop(key, None)
 
-            for key in key_to_close_position_with_lose:
-                del self.openPositions[key]
-        except:
-            print('nothing to remove')
+        for key in list(key_to_close_position_with_lose.keys()):
+            self.openPositions.pop(key, None)
 
-        print(f'profit: {key_to_close_position_with_profit}')
-        print(f'strata: {key_to_close_position_with_lose}')
+        # Close transactions if there are any to close
+        if key_to_close_position_with_profit:
+            self.closeTransaction('transactions.json', key_to_close_position_with_profit, currentPrice)
+        
+        if key_to_close_position_with_lose:
+            self.closeTransaction('transactions.json', key_to_close_position_with_lose, currentPrice)
+
+        print(f'Positions closed with profit: {key_to_close_position_with_profit}')
+        print(f'Positions closed with loss: {key_to_close_position_with_lose}')
+
         
 
-
-# Example usage:
-trx = Transactions()
-amount = 68600.00000000
-trx.monitoringOpenPositions(amount)
-print(trx.openPositions)
