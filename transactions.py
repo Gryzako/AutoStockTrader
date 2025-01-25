@@ -4,21 +4,26 @@ import json
 
 class Transactions:
     def __init__(self) -> None:
-        self.openPositions = {}
+        self.openLongPositions = {}
+        self.openShortPositions = {}
         self.amountOfProfit = 0.005 
         self.amountOfLost = 0.004
         self.fee = 0.1
+        self.betSize = 5
+        self.saldo = 0
 
         # Ensure 'transactions.json' exists
         if not os.path.isfile('transactions.json'):
             with open("transactions.json", "w") as file:
                 json.dump([], file)
 
-    def makeTransaction(self, price, time):
-        self.openPositions[time] = price
-        print(self.openPositions)
+    def makeTransaction(self, type, price, time):
+        if type == 'Long':
+            self.openLongPositions[time] = price
+        if type == 'Short':
+            self.openShortPositions[time] = price
 
-    def closeTransaction(self, json_file, positions_to_close, currentPrice):
+    def closeTransaction(self, json_file, positions_to_close, currentPrice, trxType):
         now = datetime.now()
         formatted_time = now.strftime("%Y-%m-%d %H:%M:%S")
 
@@ -30,13 +35,15 @@ class Transactions:
             data = []
 
         for key, value in positions_to_close.items():
-            profit_lost = currentPrice - float(value)
+            profit_lost = float(currentPrice) - float(value)
+            self.saldo += profit_lost
 
             trade_entry = {
                 'time_opening': key,
                 'price_buy': value,
                 'time_closing': formatted_time,
                 'price_closing': currentPrice,
+                'type of transaction' : trxType,
                 'profit': profit_lost
             }
 
@@ -46,37 +53,62 @@ class Transactions:
             json.dump(data, file, indent=4)
 
     def monitoringOpenPositions(self, currentPrice):
-        print(f'Currently open positions {self.openPositions}')
+        print(f'Currently open long positions: {self.openLongPositions}')
+        print(f'Currently open short positions: {self.openShortPositions}') 
+        print(f'Saldo: {self.saldo}')
+
         # Ensure currentPrice is a float for calculations
         currentPrice = float(currentPrice)
 
-        # Create dictionaries for positions to close
-        key_to_close_position_with_profit = {
-            key: value for key, value in self.openPositions.items() 
+        # # Long positions: Create dictionaries for positions to close
+        key_to_close_long_with_profit = {
+            key: value for key, value in self.openLongPositions.items() 
             if float(value) < currentPrice * (1 - self.amountOfProfit)
         }
         
-        key_to_close_position_with_lose = {
-            key: value for key, value in self.openPositions.items() 
+        key_to_close_long_with_lose = {
+            key: value for key, value in self.openLongPositions.items() 
             if float(value) > currentPrice * (1 + self.amountOfLost)
         }
 
+        # Short position: Create dictionary for position to close
+
+        key_to_close_short_with_profit = {
+            key: value for key, value in self.openShortPositions.items()
+            if float(value) > currentPrice * (1 + self.amountOfProfit)
+        }
+
+        key_to_close_short_with_loss = {
+            key: value for key, value in self.openShortPositions.items()
+            if float(value) < currentPrice * (1 - self.amountOfLost)     
+        }
+
         # Remove closed positions from openPositions
-        for key in list(key_to_close_position_with_profit.keys()):
-            self.openPositions.pop(key, None)
+        for key in list(key_to_close_long_with_profit.keys()):
+            self.openLongPositions.pop(key, None)
 
-        for key in list(key_to_close_position_with_lose.keys()):
-            self.openPositions.pop(key, None)
+        for key in list(key_to_close_long_with_lose.keys()):
+            self.openLongPositions.pop(key, None)
 
-        # Close transactions if there are any to close
-        if key_to_close_position_with_profit:
-            self.closeTransaction('transactions.json', key_to_close_position_with_profit, currentPrice)
+        for key in list(key_to_close_short_with_profit.keys()):
+            self.openShortPositions.pop(key, None)
+
+        for key in list(key_to_close_short_with_loss.keys()):
+            self.openShortPositions.pop(key, None)
+
+        # Close transactions if there are any to close:
+        if key_to_close_long_with_profit:
+            self.closeTransaction('transactions.json', key_to_close_long_with_profit, currentPrice, 'Long')
         
-        if key_to_close_position_with_lose:
-            self.closeTransaction('transactions.json', key_to_close_position_with_lose, currentPrice)
+        if key_to_close_long_with_lose:
+            self.closeTransaction('transactions.json', key_to_close_long_with_lose, currentPrice, 'Long')
 
-        print(f'Positions closed with profit: {key_to_close_position_with_profit}')
-        print(f'Positions closed with loss: {key_to_close_position_with_lose}')
+        if key_to_close_short_with_profit:
+            self.closeTransaction('transactions.json', key_to_close_short_with_profit, currentPrice, 'Short')
+        
+        if key_to_close_short_with_loss:
+            self.closeTransaction('transactions.json', key_to_close_short_with_loss, currentPrice, 'Short')         
+
 
         
 
