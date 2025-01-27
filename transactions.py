@@ -6,8 +6,8 @@ class Transactions:
     def __init__(self) -> None:
         self.openLongPositions = {}
         self.openShortPositions = {}
-        self.amountOfProfit = 0.005 
-        self.amountOfLost = 0.004
+        self.amountOfProfit = 0.00095 
+        self.amountOfLost = 0.00085
         self.fee = 0.1
         self.betSize = 5
         self.saldo = 0
@@ -33,11 +33,14 @@ class Transactions:
         except (FileNotFoundError, json.JSONDecodeError):
             print("File not found or JSON decoding error. Initializing empty data list.")
             data = []
-
         for key, value in positions_to_close.items():
-            profit_lost = float(currentPrice) - float(value)
-            self.saldo += profit_lost
-
+            if trxType == 'Long':
+                profit_lost = float(currentPrice) - float(value)
+                self.saldo += profit_lost
+            elif trxType == 'Short':
+                profit_lost = float(value) - float(currentPrice) 
+                self.saldo += profit_lost
+                
             trade_entry = {
                 'time_opening': key,
                 'price_buy': value,
@@ -46,11 +49,11 @@ class Transactions:
                 'type of transaction' : trxType,
                 'profit': profit_lost
             }
-
             data.append(trade_entry)
 
         with open(json_file, 'w') as file:
             json.dump(data, file, indent=4)
+        
 
     def monitoringOpenPositions(self, currentPrice):
         print(f'Currently open long positions: {self.openLongPositions}')

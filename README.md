@@ -14,5 +14,10 @@ Plan how aplication works.
 - results will be stored in the file in the format easy to analyse.
 
 Needs to be done:
-- application should detect also trend and open short position when detected.
-- Open position should be defined as short / long
+- closing short long works incorrectly. If short is closed witha  profit saldo is deducted. 
+- add Moving Averages
+- Relative Strength Index (buy when RSI is bellow 30 pts, sell when it is above 70)
+- implement detection of Breakout Levels (buy when price corss key resistance level, sell when price falls below support level)
+- implement ccxt library
+-
+

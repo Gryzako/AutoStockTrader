@@ -4,7 +4,6 @@ from datetime import datetime
 from pricechecker import PriceChecker
 from transactions import Transactions
 
-
 trx = Transactions()
 checkPrice = PriceChecker(trx)
 
